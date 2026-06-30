@@ -1,9 +1,6 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
 
 import express from 'express';
+import cors from 'cors'; // 
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -1027,6 +1024,15 @@ function writeDb(data: any) {
 
 async function startServer() {
   const app = express();
+
+  //CORS middleware configuration directly below express initiation
+  app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Total-Count'],
+    exposedHeaders: ['X-Total-Count']
+  }));
+
   app.use(express.json());
 
   // API Logging middleware
