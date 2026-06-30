@@ -1,0 +1,1221 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { createServer as createViteServer } from 'vite';
+
+// Resolve directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = 3000;
+const DB_FILE = path.join(process.cwd(), 'db.json');
+
+// Initial sample database
+const INITIAL_DATA = {
+  users: [
+    {
+      id: 'usr-1',
+      name: 'John Doe',
+      email: 'admin@demo.com',
+      role: 'admin',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80',
+      department: 'Engineering',
+      joinedDate: '2025-01-15',
+    },
+    {
+      id: 'usr-2',
+      name: 'Sarah Smith',
+      email: 'sarah@demo.com',
+      role: 'manager',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80',
+      department: 'Product',
+      joinedDate: '2025-03-10',
+    },
+    {
+      id: 'usr-3',
+      name: 'Mike Johnson',
+      email: 'mike@demo.com',
+      role: 'manager',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80',
+      department: 'Engineering',
+      joinedDate: '2025-05-22',
+    },
+    {
+      id: 'usr-4',
+      name: 'Emily Davis',
+      email: 'emily@demo.com',
+      role: 'employee',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=80&h=80&q=80',
+      department: 'Design',
+      joinedDate: '2025-08-01',
+    },
+    {
+      id: 'usr-5',
+      name: 'David Wilson',
+      email: 'david@demo.com',
+      role: 'employee',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&h=80&q=80',
+      department: 'QA',
+      joinedDate: '2025-09-12',
+    },
+  ],
+  projects: [
+    {
+      id: 'proj-1',
+      name: 'Website Redesign',
+      description: 'Overhaul the corporate marketing website to modern branding standards and improve user conversion rate by 25%.',
+      startDate: '2026-05-01',
+      endDate: '2026-06-30',
+      status: 'active',
+      progress: 75,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-5', 'usr-3'],
+      clientName: 'Acme Corp',
+      budget: '$45,000',
+    },
+    {
+      id: 'proj-2',
+      name: 'E-commerce Platform',
+      description: 'Build a secure, scalable B2C storefront with Stripe payment integration, cart management, and order fulfillment APIs.',
+      startDate: '2026-04-15',
+      endDate: '2026-07-15',
+      status: 'active',
+      progress: 60,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-4', 'usr-5'],
+      clientName: 'Selas Retail',
+      budget: '$85,000',
+    },
+    {
+      id: 'proj-3',
+      name: 'Mobile App Development',
+      description: 'Native iOS and Android tracker companion applications developed using React Native and shared notification hubs.',
+      startDate: '2026-06-10',
+      endDate: '2026-09-10',
+      status: 'planning',
+      progress: 20,
+      managerId: 'usr-1',
+      teamMemberIds: ['usr-2', 'usr-5'],
+      clientName: 'Trackline Global',
+      budget: '$60,000',
+    },
+    {
+      id: 'proj-4',
+      name: 'CRM Integration',
+      description: 'Sync customer tables with Salesforce databases and map contact touchpoints across marketing campaigns.',
+      startDate: '2026-02-10',
+      endDate: '2026-05-15',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-3', 'usr-4'],
+      clientName: 'Initech Inc',
+      budget: '$30,000',
+    },
+    {
+      id: 'proj-5',
+      name: 'Marketing Campaign',
+      description: 'Establish search ads and social sponsorships for Q3 product launch to drive registration sign-ups.',
+      startDate: '2026-06-01',
+      endDate: '2026-08-30',
+      status: 'on_hold',
+      progress: 45,
+      managerId: 'usr-1',
+      teamMemberIds: ['usr-5'],
+      clientName: 'Internal',
+      budget: '$15,000',
+    },
+    {
+      id: 'proj-6',
+      name: 'Cloud Infrastructure Migration',
+      description: 'Transition monolithic workloads to microservices deployed on Google Cloud Platform with Kubernetes auto-scaling.',
+      startDate: '2026-03-01',
+      endDate: '2026-08-15',
+      status: 'active',
+      progress: 40,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'BlueSky Logistics',
+      budget: '$120,000',
+    },
+    {
+      id: 'proj-7',
+      name: 'HR Portal Development',
+      description: 'Create an internal single-page application for employee onboarding, timesheet logging, and benefit elections.',
+      startDate: '2026-07-01',
+      endDate: '2026-10-30',
+      status: 'planning',
+      progress: 10,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-5'],
+      clientName: 'Internal',
+      budget: '$35,000',
+    },
+    {
+      id: 'proj-8',
+      name: 'Business Intelligence Dashboard',
+      description: 'Implement complex ETL pipelines to synthesize operational databases into real-time analytical graphs using D3.js.',
+      startDate: '2026-05-10',
+      endDate: '2026-08-20',
+      status: 'active',
+      progress: 50,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-3', 'usr-4'],
+      clientName: 'Apex Capital',
+      budget: '$55,000',
+    },
+    {
+      id: 'proj-9',
+      name: 'Brand Identity Overhaul',
+      description: 'Design unified brand books, vector icons, typographies, and messaging guides across all corporate divisions.',
+      startDate: '2026-01-10',
+      endDate: '2026-04-15',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4'],
+      clientName: 'Nova Retail Corp',
+      budget: '$25,000',
+    },
+    {
+      id: 'proj-10',
+      name: 'Inventory Management System',
+      description: 'Deploy real-time warehouse logging software integrated with RFID scanners and automated reorder triggers.',
+      startDate: '2026-04-01',
+      endDate: '2026-09-01',
+      status: 'active',
+      progress: 30,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'SwiftSupply Ltd',
+      budget: '$70,000',
+    },
+    {
+      id: 'proj-11',
+      name: 'Security Audit & Hardening',
+      description: 'Perform dependency analysis, penetrate system firewalls, and achieve SOC2 Type II security certification benchmarks.',
+      startDate: '2026-03-10',
+      endDate: '2026-06-15',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'Prime Banking Group',
+      budget: '$40,000',
+    },
+    {
+      id: 'proj-12',
+      name: 'Customer Onboarding Redesign',
+      description: 'Streamline client signup wizard using step-based forms, micro-animations, and instant email verification routes.',
+      startDate: '2026-05-15',
+      endDate: '2026-07-20',
+      status: 'active',
+      progress: 85,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-5'],
+      clientName: 'Fintech Spark',
+      budget: '$18,000',
+    },
+    {
+      id: 'proj-13',
+      name: 'Content Management Upgrade',
+      description: 'Migrate heritage databases into modern headless CMS layouts with graphQL query backends.',
+      startDate: '2026-06-01',
+      endDate: '2026-09-30',
+      status: 'on_hold',
+      progress: 15,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-3'],
+      clientName: 'Global Media Group',
+      budget: '$22,000',
+    },
+    {
+      id: 'proj-14',
+      name: 'Enterprise API Gateway',
+      description: 'Construct custom routing middleware to securely authenticate and throttle enterprise clients.',
+      startDate: '2026-08-01',
+      endDate: '2026-12-01',
+      status: 'planning',
+      progress: 5,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-4'],
+      clientName: 'DataConnect Corp',
+      budget: '$95,000',
+    },
+    {
+      id: 'proj-15',
+      name: 'Employee Training Program',
+      description: 'Execute security awareness seminars and technical certifications for cross-department staff.',
+      startDate: '2026-01-15',
+      endDate: '2026-03-30',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-1',
+      teamMemberIds: ['usr-2', 'usr-3', 'usr-4', 'usr-5'],
+      clientName: 'Internal',
+      budget: '$12,000',
+    },
+    {
+      id: 'proj-16',
+      name: 'Product Launch Event Plan',
+      description: 'Coordinate digital press briefings, website launch banners, and direct mail announcements for Q4.',
+      startDate: '2026-05-01',
+      endDate: '2026-07-31',
+      status: 'active',
+      progress: 90,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-5'],
+      clientName: 'Velo Dynamics',
+      budget: '$50,000',
+    },
+    {
+      id: 'proj-17',
+      name: 'Financial Reporting Automation',
+      description: 'Assemble automated balance sheet synthesis models exporting into modern analytical spreadsheets.',
+      startDate: '2026-04-10',
+      endDate: '2026-08-10',
+      status: 'active',
+      progress: 70,
+      managerId: 'usr-1',
+      teamMemberIds: ['usr-3'],
+      clientName: 'Summa Accounts',
+      budget: '$65,000',
+    },
+    {
+      id: 'proj-18',
+      name: 'Data Warehouse Setup',
+      description: 'Migrate analytical structures from relational models to scalable BigQuery analytical data silos.',
+      startDate: '2026-08-15',
+      endDate: '2026-11-15',
+      status: 'planning',
+      progress: 0,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'AeroGroup Inc',
+      budget: '$110,000',
+    },
+    {
+      id: 'proj-19',
+      name: 'Customer Support Chatbot',
+      description: 'Train modern generative model routing parameters to instantly diagnose support issues.',
+      startDate: '2026-05-01',
+      endDate: '2026-08-01',
+      status: 'active',
+      progress: 45,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4', 'usr-5'],
+      clientName: 'HelpNet Solutions',
+      budget: '$28,000',
+    },
+    {
+      id: 'proj-20',
+      name: 'Internal IT Helpdesk Upgrade',
+      description: 'Modernize internal request ticketing portals with automated slack trigger integration hooks.',
+      startDate: '2026-06-15',
+      endDate: '2026-09-15',
+      status: 'on_hold',
+      progress: 55,
+      managerId: 'usr-1',
+      teamMemberIds: ['usr-5'],
+      clientName: 'Internal',
+      budget: '$32,000',
+    },
+    {
+      id: 'proj-21',
+      name: 'SEO Optimization Initiative',
+      description: 'Conduct comprehensive organic keyword research to map content gaps and correct index layouts.',
+      startDate: '2026-02-01',
+      endDate: '2026-05-01',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4'],
+      clientName: 'Astra Travel',
+      budget: '$10,000',
+    },
+    {
+      id: 'proj-22',
+      name: 'Partner Integration Portal',
+      description: 'Build safe developer login hubs facilitating programmatic shipping rate lookup models.',
+      startDate: '2026-06-01',
+      endDate: '2026-10-01',
+      status: 'active',
+      progress: 25,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'SwiftSupply Ltd',
+      budget: '$52,000',
+    },
+    {
+      id: 'proj-23',
+      name: 'Newsletter Automation Pipeline',
+      description: 'Design step-based lifecycle mailing arrays triggering on target client subscription tags.',
+      startDate: '2026-05-01',
+      endDate: '2026-07-01',
+      status: 'active',
+      progress: 80,
+      managerId: 'usr-2',
+      teamMemberIds: ['usr-4'],
+      clientName: 'Selas Retail',
+      budget: '$16,000',
+    },
+    {
+      id: 'proj-24',
+      name: 'Performance Monitoring Setup',
+      description: 'Deploy real-time error log alerts and system performance monitors tracking backend loads.',
+      startDate: '2026-01-20',
+      endDate: '2026-03-20',
+      status: 'completed',
+      progress: 100,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-5'],
+      clientName: 'BlueSky Logistics',
+      budget: '$20,000',
+    },
+    {
+      id: 'proj-25',
+      name: 'SaaS Billing System Overhaul',
+      description: 'Configure multi-tier subscription models in Stripe including usage counters and credit limits.',
+      startDate: '2026-06-01',
+      endDate: '2026-11-01',
+      status: 'active',
+      progress: 15,
+      managerId: 'usr-3',
+      teamMemberIds: ['usr-1', 'usr-4'],
+      clientName: 'DataConnect Corp',
+      budget: '$80,000',
+    },
+  ],
+  tasks: [
+    {
+      id: 'task-1',
+      projectId: 'proj-1',
+      name: 'Design homepage wireframe',
+      description: 'Create low-fidelity wireframes and layout compositions for the marketing homepage with focus on conversion paths.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-05-20',
+      assigneeId: 'usr-4',
+      tags: ['Design', 'UI'],
+    },
+    {
+      id: 'task-2',
+      projectId: 'proj-1',
+      name: 'API integration with payment gateway',
+      description: 'Establish webhooks and process payments safely using custom controller routes and client-side tokens.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-22',
+      assigneeId: 'usr-3',
+      tags: ['Backend', 'Stripe'],
+    },
+    {
+      id: 'task-3',
+      projectId: 'proj-2',
+      name: 'User authentication flow',
+      description: 'Implement JWT tokens, signup routes, persistent local token storage, and layout-based route guards.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-06-25',
+      assigneeId: 'usr-1',
+      tags: ['Auth', 'Frontend'],
+    },
+    {
+      id: 'task-4',
+      projectId: 'proj-1',
+      name: 'Content strategy planning',
+      description: 'Create a calendar, identify main keywords, and outline blogs for the summer advertising push.',
+      status: 'review',
+      priority: 'medium',
+      dueDate: '2026-06-28',
+      assigneeId: 'usr-4',
+      tags: ['Marketing'],
+    },
+    {
+      id: 'task-5',
+      projectId: 'proj-4',
+      name: 'Database schema design',
+      description: 'Map database entities, index frequently accessed columns, and generate primary keys for relation tracking.',
+      status: 'completed',
+      priority: 'low',
+      dueDate: '2026-03-30',
+      assigneeId: 'usr-3',
+      tags: ['Database'],
+    },
+    {
+      id: 'task-6',
+      projectId: 'proj-2',
+      name: 'Create product landing page',
+      description: 'Build responsive landing components using Tailwind and layout motion entries.',
+      status: 'in_progress',
+      priority: 'high',
+      dueDate: '2026-06-15',
+      assigneeId: 'usr-4',
+      tags: ['Frontend', 'Vite'],
+    },
+    {
+      id: 'task-7',
+      projectId: 'proj-3',
+      name: 'Push notification services',
+      description: 'Integrate native background notification workers to ping users on activity alerts.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-07-10',
+      assigneeId: 'usr-5',
+      tags: ['Mobile', 'Push'],
+    },
+    {
+      id: 'task-8',
+      projectId: 'proj-5',
+      name: 'Analytics Dashboard configuration',
+      description: 'Build reporting graphs to map click-through analytics and campaign referral logs.',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: '2026-06-20',
+      assigneeId: 'usr-3',
+      tags: ['Analytics'],
+    },
+    {
+      id: 'task-9',
+      projectId: 'proj-6',
+      name: 'GCP Kubernetes setup',
+      description: 'Establish highly durable cluster regions supporting standard load balanced ingress controllers.',
+      status: 'in_progress',
+      priority: 'high',
+      dueDate: '2026-06-28',
+      assigneeId: 'usr-1',
+      tags: ['Cloud', 'DevOps'],
+    },
+    {
+      id: 'task-10',
+      projectId: 'proj-6',
+      name: 'Dockerize monolithic services',
+      description: 'Construct optimized multi-stage Dockerfiles caching key package layers safely.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-04-15',
+      assigneeId: 'usr-3',
+      tags: ['DevOps'],
+    },
+    {
+      id: 'task-11',
+      projectId: 'proj-7',
+      name: 'Design onboarding workflow',
+      description: 'Draft step-by-step wireframe diagrams mapping applicant progress checklists.',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: '2026-07-15',
+      assigneeId: 'usr-4',
+      tags: ['Design', 'UX'],
+    },
+    {
+      id: 'task-12',
+      projectId: 'proj-8',
+      name: 'Assemble ETL query pipelines',
+      description: 'Write performant transactional lookup aggregates sorting historical revenue streams.',
+      status: 'in_progress',
+      priority: 'high',
+      dueDate: '2026-06-30',
+      assigneeId: 'usr-3',
+      tags: ['Database', 'ETL'],
+    },
+    {
+      id: 'task-13',
+      projectId: 'proj-8',
+      name: 'Configure D3 line metrics',
+      description: 'Integrate responsive charting vectors rendering live query speed metrics.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-07-05',
+      assigneeId: 'usr-4',
+      tags: ['Frontend', 'D3'],
+    },
+    {
+      id: 'task-14',
+      projectId: 'proj-9',
+      name: 'Deliver vector logo set',
+      description: 'Compile scalable master brand assets supporting dark mode layout layers.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-03-01',
+      assigneeId: 'usr-4',
+      tags: ['Design', 'Identity'],
+    },
+    {
+      id: 'task-15',
+      projectId: 'proj-10',
+      name: 'RFID scanner driver integration',
+      description: 'Implement firmware translation protocols reading scanner trigger logs safely.',
+      status: 'in_progress',
+      priority: 'high',
+      dueDate: '2026-07-12',
+      assigneeId: 'usr-5',
+      tags: ['Backend', 'Hardware'],
+    },
+    {
+      id: 'task-16',
+      projectId: 'proj-10',
+      name: 'Automated stock reorder routes',
+      description: 'Establish automated email purchase triggers launching when item levels dip below buffer.',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: '2026-07-25',
+      assigneeId: 'usr-1',
+      tags: ['Backend'],
+    },
+    {
+      id: 'task-17',
+      projectId: 'proj-11',
+      name: 'SOC2 firewall audit compliance',
+      description: 'Scan active open network ports to correct vulnerable pipeline assets.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-05-10',
+      assigneeId: 'usr-3',
+      tags: ['Security', 'Audit'],
+    },
+    {
+      id: 'task-18',
+      projectId: 'proj-11',
+      name: 'Penetration check reporting',
+      description: 'Draft thorough vulnerability logs indicating sandbox simulation outcomes.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-05-20',
+      assigneeId: 'usr-1',
+      tags: ['Security'],
+    },
+    {
+      id: 'task-19',
+      projectId: 'proj-12',
+      name: 'Assemble wizard UI forms',
+      description: 'Build elegant responsive state controllers checking client validation bounds.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-29',
+      assigneeId: 'usr-4',
+      tags: ['Frontend'],
+    },
+    {
+      id: 'task-20',
+      projectId: 'proj-12',
+      name: 'Mailgun signup verify webhooks',
+      description: 'Connect outbound verification pipelines sending transient passcode sequences.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-05-30',
+      assigneeId: 'usr-5',
+      tags: ['Backend', 'Email'],
+    },
+    {
+      id: 'task-21',
+      projectId: 'proj-13',
+      name: 'Headless CMS setup',
+      description: 'Configure admin layout fields matching legacy metadata directories.',
+      status: 'todo',
+      priority: 'medium',
+      dueDate: '2026-07-15',
+      assigneeId: 'usr-4',
+      tags: ['CMS', 'Database'],
+    },
+    {
+      id: 'task-22',
+      projectId: 'proj-14',
+      name: 'Construct rate-limit guards',
+      description: 'Write custom throttling middlewares checking API client token limits.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-08-15',
+      assigneeId: 'usr-1',
+      tags: ['Backend', 'Security'],
+    },
+    {
+      id: 'task-23',
+      projectId: 'proj-15',
+      name: 'Publish safety courseware',
+      description: 'Compile visual onboarding tutorials reviewing general cybersecurity workflows.',
+      status: 'completed',
+      priority: 'low',
+      dueDate: '2026-02-15',
+      assigneeId: 'usr-1',
+      tags: ['HR', 'Compliance'],
+    },
+    {
+      id: 'task-24',
+      projectId: 'proj-16',
+      name: 'PR press briefing release',
+      description: 'Draft outreach templates highlighting upcoming enterprise scheduling capabilities.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-25',
+      assigneeId: 'usr-2',
+      tags: ['PR', 'Marketing'],
+    },
+    {
+      id: 'task-25',
+      projectId: 'proj-16',
+      name: 'Design landing banners',
+      description: 'Assemble clean high-contrast promotional slides highlighting launch discounts.',
+      status: 'completed',
+      priority: 'low',
+      dueDate: '2026-06-05',
+      assigneeId: 'usr-4',
+      tags: ['Design'],
+    },
+    {
+      id: 'task-26',
+      projectId: 'proj-17',
+      name: 'Synthesize ledger sheets',
+      description: 'Compose database reporting views summarizing outstanding client invoices.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-07-10',
+      assigneeId: 'usr-3',
+      tags: ['Backend', 'Finance'],
+    },
+    {
+      id: 'task-27',
+      projectId: 'proj-18',
+      name: 'Data migration schema draft',
+      description: 'Map relational SQL structures to analytical BigQuery schemas.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-09-01',
+      assigneeId: 'usr-1',
+      tags: ['Cloud', 'Database'],
+    },
+    {
+      id: 'task-28',
+      projectId: 'proj-19',
+      name: 'Chatbot intent classification',
+      description: 'Classify target phrases into intent groupings for precise NLP model routing.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-30',
+      assigneeId: 'usr-4',
+      tags: ['AI', 'NLP'],
+    },
+    {
+      id: 'task-29',
+      projectId: 'proj-19',
+      name: 'Slack slash command route',
+      description: 'Build backend handlers mapping chatbot questions directly from enterprise Slack portals.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-07-20',
+      assigneeId: 'usr-5',
+      tags: ['Backend', 'Slack'],
+    },
+    {
+      id: 'task-30',
+      projectId: 'proj-20',
+      name: 'Helpdesk portal design mockup',
+      description: 'Design dark-slate layout drafts featuring prominent search indices.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-07-15',
+      assigneeId: 'usr-4',
+      tags: ['Design', 'UI'],
+    },
+    {
+      id: 'task-31',
+      projectId: 'proj-21',
+      name: 'SEO keyword search log',
+      description: 'Analyze programmatic search query statistics targeting enterprise shipping software.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-04-10',
+      assigneeId: 'usr-4',
+      tags: ['Marketing', 'SEO'],
+    },
+    {
+      id: 'task-32',
+      projectId: 'proj-22',
+      name: 'Developer token portal setup',
+      description: 'Build client dashboard tabs to register partner API secret tokens.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-08-10',
+      assigneeId: 'usr-1',
+      tags: ['Auth', 'Frontend'],
+    },
+    {
+      id: 'task-33',
+      projectId: 'proj-22',
+      name: 'Programmatic lookup routes',
+      description: 'Write robust controller endpoints returning dynamic shipping quotes on requested routes.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-27',
+      assigneeId: 'usr-5',
+      tags: ['Backend'],
+    },
+    {
+      id: 'task-34',
+      projectId: 'proj-23',
+      name: 'Subscription lifecycle rules',
+      description: 'Outline timed marketing schedules triggering newsletter deliveries.',
+      status: 'completed',
+      priority: 'low',
+      dueDate: '2026-05-15',
+      assigneeId: 'usr-4',
+      tags: ['Marketing'],
+    },
+    {
+      id: 'task-35',
+      projectId: 'proj-24',
+      name: 'Configure log alerts',
+      description: 'Set up system failure notifications using custom alert routing.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-02-10',
+      assigneeId: 'usr-3',
+      tags: ['DevOps', 'Security'],
+    },
+    {
+      id: 'task-36',
+      projectId: 'proj-25',
+      name: 'Stripe subscription logic',
+      description: 'Integrate dynamic Stripe billing tiers with programmatic payment checks.',
+      status: 'in_progress',
+      priority: 'high',
+      dueDate: '2026-06-28',
+      assigneeId: 'usr-1',
+      tags: ['Backend', 'Stripe'],
+    },
+    {
+      id: 'task-37',
+      projectId: 'proj-2',
+      name: 'Shopping cart layout UI',
+      description: 'Design clean grid lists tracking checkout totals with local item counts.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-05-15',
+      assigneeId: 'usr-4',
+      tags: ['Frontend'],
+    },
+    {
+      id: 'task-38',
+      projectId: 'proj-2',
+      name: 'Order database models',
+      description: 'Construct order records mapping buyer parameters to inventory skus.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-05-10',
+      assigneeId: 'usr-1',
+      tags: ['Database', 'Backend'],
+    },
+    {
+      id: 'task-39',
+      projectId: 'proj-2',
+      name: 'Assemble catalog filters',
+      description: 'Write responsive client routing filters ordering catalog results.',
+      status: 'in_progress',
+      priority: 'low',
+      dueDate: '2026-06-20',
+      assigneeId: 'usr-4',
+      tags: ['Frontend'],
+    },
+    {
+      id: 'task-40',
+      projectId: 'proj-1',
+      name: 'Homepage responsive QA',
+      description: 'Perform viewport tests across tablet and mobile displays.',
+      status: 'in_progress',
+      priority: 'low',
+      dueDate: '2026-06-26',
+      assigneeId: 'usr-5',
+      tags: ['QA', 'Design'],
+    },
+    {
+      id: 'task-41',
+      projectId: 'proj-3',
+      name: 'React Native navigation routing',
+      description: 'Configure standard drawer and stack routes crossing pages cleanly.',
+      status: 'in_progress',
+      priority: 'medium',
+      dueDate: '2026-06-25',
+      assigneeId: 'usr-2',
+      tags: ['Mobile'],
+    },
+    {
+      id: 'task-42',
+      projectId: 'proj-3',
+      name: 'Android Gradle release configuration',
+      description: 'Map secure release keystore credentials compiling pipeline binaries.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-07-01',
+      assigneeId: 'usr-1',
+      tags: ['Mobile', 'DevOps'],
+    },
+    {
+      id: 'task-43',
+      projectId: 'proj-4',
+      name: 'Salesforce API schema map',
+      description: 'Correlate custom client tables to Salesforce contact structures.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-03-15',
+      assigneeId: 'usr-3',
+      tags: ['Database'],
+    },
+    {
+      id: 'task-44',
+      projectId: 'proj-4',
+      name: 'Salesforce OAuth tokens',
+      description: 'Integrate safe backend flows refreshing authorization tokens programmatically.',
+      status: 'completed',
+      priority: 'high',
+      dueDate: '2026-04-01',
+      assigneeId: 'usr-2',
+      tags: ['Auth', 'Backend'],
+    },
+    {
+      id: 'task-45',
+      projectId: 'proj-6',
+      name: 'Write cluster backup scripts',
+      description: 'Develop cron triggers archiving database assets into cloud storage buckets.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-07-20',
+      assigneeId: 'usr-5',
+      tags: ['Cloud', 'Backup'],
+    },
+    {
+      id: 'task-46',
+      projectId: 'proj-8',
+      name: 'Optimize query indices',
+      description: 'Inject custom database indices reducing analytics page load speed.',
+      status: 'completed',
+      priority: 'medium',
+      dueDate: '2026-05-30',
+      assigneeId: 'usr-3',
+      tags: ['Database'],
+    },
+    {
+      id: 'task-47',
+      projectId: 'proj-10',
+      name: 'Configure sensor buffers',
+      description: 'Program hardware logging limits preventing duplicate read triggers.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-08-01',
+      assigneeId: 'usr-5',
+      tags: ['Hardware'],
+    },
+    {
+      id: 'task-48',
+      projectId: 'proj-12',
+      name: 'Signup validation rules',
+      description: 'Inject client validation schema preventing spam applicant registrations.',
+      status: 'completed',
+      priority: 'low',
+      dueDate: '2026-05-25',
+      assigneeId: 'usr-4',
+      tags: ['Frontend'],
+    },
+    {
+      id: 'task-49',
+      projectId: 'proj-14',
+      name: 'SSL certificates setup',
+      description: 'Establish safe SSL certificates checking routing layers.',
+      status: 'todo',
+      priority: 'high',
+      dueDate: '2026-08-25',
+      assigneeId: 'usr-3',
+      tags: ['Security', 'Cloud'],
+    },
+    {
+      id: 'task-50',
+      projectId: 'proj-25',
+      name: 'Invoice generation templates',
+      description: 'Build dynamic PDF invoice templates printing transaction receipts programmatically.',
+      status: 'todo',
+      priority: 'low',
+      dueDate: '2026-07-05',
+      assigneeId: 'usr-4',
+      tags: ['Backend', 'Finance'],
+    },
+  ],
+  activities: [
+    {
+      id: 'act-1',
+      userId: 'usr-2',
+      userName: 'Sarah Smith',
+      userAvatar: 'SS',
+      action: 'Created project',
+      details: 'Website Redesign',
+      timestamp: '2026-06-24T21:10:00-07:00',
+      type: 'project',
+      referenceId: 'proj-1',
+    },
+    {
+      id: 'act-2',
+      userId: 'usr-3',
+      userName: 'Mike Johnson',
+      userAvatar: 'MJ',
+      action: 'Changed task lane',
+      details: 'Database schema design moved to Completed',
+      timestamp: '2026-06-24T19:45:00-07:00',
+      type: 'task',
+      referenceId: 'task-5',
+    },
+    {
+      id: 'act-3',
+      userId: 'usr-1',
+      userName: 'John Doe',
+      userAvatar: 'JD',
+      action: 'Updated project status',
+      details: 'Mobile App Development planning initiated',
+      timestamp: '2026-06-24T18:20:00-07:00',
+      type: 'project',
+      referenceId: 'proj-3',
+    },
+    {
+      id: 'act-4',
+      userId: 'usr-4',
+      userName: 'Emily Davis',
+      userAvatar: 'ED',
+      action: 'Completed task',
+      details: 'Design homepage wireframe',
+      timestamp: '2026-06-24T17:30:00-07:00',
+      type: 'task',
+      referenceId: 'task-1',
+    },
+    {
+      id: 'act-5',
+      userId: 'usr-5',
+      userName: 'David Wilson',
+      userAvatar: 'DW',
+      action: 'Flagged QA bugs',
+      details: '3 minor css positioning alignment issues identified',
+      timestamp: '2026-06-24T16:15:00-07:00',
+      type: 'system',
+    },
+  ]
+};
+
+// Database helper functions
+function readDb() {
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_DATA, null, 2), 'utf-8');
+      return INITIAL_DATA;
+    }
+    const content = fs.readFileSync(DB_FILE, 'utf-8');
+    return JSON.parse(content);
+  } catch (err) {
+    console.error('Error reading database file:', err);
+    return INITIAL_DATA;
+  }
+}
+
+function writeDb(data: any) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing database file:', err);
+  }
+}
+
+async function startServer() {
+  const app = express();
+  app.use(express.json());
+
+  // API Logging middleware
+  app.use((req, res, next) => {
+    console.log(`[API ${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+  });
+
+  // PROJECTS ENDPOINTS
+  app.get('/api/projects', (req, res) => {
+    const db = readDb();
+    const page = parseInt(req.query.page as string || req.query._page as string || '');
+    const limit = parseInt(req.query.limit as string || req.query._limit as string || '');
+
+    res.setHeader('X-Total-Count', db.projects.length);
+    res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
+
+    if (page && limit) {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedProjects = db.projects.slice(startIndex, endIndex);
+      return res.json(paginatedProjects);
+    }
+
+    res.json(db.projects);
+  });
+
+  app.post('/api/projects', (req, res) => {
+    const db = readDb();
+    const newProject = req.body;
+    db.projects.unshift(newProject);
+    writeDb(db);
+    res.status(201).json(newProject);
+  });
+
+  app.put('/api/projects/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    const index = db.projects.findIndex((p: any) => p.id === id);
+    if (index !== -1) {
+      db.projects[index] = { ...db.projects[index], ...req.body };
+      writeDb(db);
+      res.json(db.projects[index]);
+    } else {
+      res.status(404).json({ error: 'Project not found' });
+    }
+  });
+
+  app.delete('/api/projects/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    db.projects = db.projects.filter((p: any) => p.id !== id);
+    // Cascade delete tasks inside project
+    db.tasks = db.tasks.filter((t: any) => t.projectId !== id);
+    writeDb(db);
+    res.json({ success: true, id });
+  });
+
+  // TASKS ENDPOINTS
+  app.get('/api/tasks', (req, res) => {
+    const db = readDb();
+    const page = parseInt(req.query.page as string || req.query._page as string || '');
+    const limit = parseInt(req.query.limit as string || req.query._limit as string || '');
+
+    res.setHeader('X-Total-Count', db.tasks.length);
+    res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
+
+    if (page && limit) {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedTasks = db.tasks.slice(startIndex, endIndex);
+      return res.json(paginatedTasks);
+    }
+
+    res.json(db.tasks);
+  });
+
+  app.post('/api/tasks', (req, res) => {
+    const db = readDb();
+    const newTask = req.body;
+    db.tasks.unshift(newTask);
+    writeDb(db);
+    res.status(201).json(newTask);
+  });
+
+  app.put('/api/tasks/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    const index = db.tasks.findIndex((t: any) => t.id === id);
+    if (index !== -1) {
+      db.tasks[index] = { ...db.tasks[index], ...req.body };
+      writeDb(db);
+      res.json(db.tasks[index]);
+    } else {
+      res.status(404).json({ error: 'Task not found' });
+    }
+  });
+
+  app.delete('/api/tasks/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    db.tasks = db.tasks.filter((t: any) => t.id !== id);
+    writeDb(db);
+    res.json({ success: true, id });
+  });
+
+  app.delete('/api/tasks/project/:projectId', (req, res) => {
+    const db = readDb();
+    const { projectId } = req.params;
+    db.tasks = db.tasks.filter((t: any) => t.projectId !== projectId);
+    writeDb(db);
+    res.json({ success: true, projectId });
+  });
+
+  // USERS ENDPOINTS
+  app.get('/api/users', (req, res) => {
+    const db = readDb();
+    res.json(db.users);
+  });
+
+  app.post('/api/users', (req, res) => {
+    const db = readDb();
+    const newUser = req.body;
+    db.users.push(newUser);
+    writeDb(db);
+    res.status(201).json(newUser);
+  });
+
+  app.put('/api/users/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    const index = db.users.findIndex((u: any) => u.id === id);
+    if (index !== -1) {
+      db.users[index] = { ...db.users[index], ...req.body };
+      writeDb(db);
+      res.json(db.users[index]);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  });
+
+  app.delete('/api/users/:id', (req, res) => {
+    const db = readDb();
+    const { id } = req.params;
+    db.users = db.users.filter((u: any) => u.id !== id);
+    writeDb(db);
+    res.json({ success: true, id });
+  });
+
+  // ACTIVITIES ENDPOINTS
+  app.get('/api/activities', (req, res) => {
+    const db = readDb();
+    res.json(db.activities);
+  });
+
+  app.post('/api/activities', (req, res) => {
+    const db = readDb();
+    const newActivity = {
+      ...req.body,
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toISOString(),
+    };
+    db.activities.unshift(newActivity);
+    // Keep only last 100 activities for performance
+    if (db.activities.length > 100) {
+      db.activities = db.activities.slice(0, 100);
+    }
+    writeDb(db);
+    res.status(201).json(newActivity);
+  });
+
+  // Vite development middleware or static production serve
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Trackline Backend Server listening on http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();
